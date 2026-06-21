@@ -2,22 +2,35 @@
 
 import { useState } from 'react'
 
-const SHORTENED_URL = "https://snip.ly/abc123"
-
 export default function UrlShortener() {
-  const [inputValue, setInputValue] = useState("")
-  const [originalUrl, setOriginalUrl] = useState("")
+  const [inputValue, setInputValue] = useState("");
+  const [originalUrl, setOriginalUrl] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   const isResult = originalUrl !== ""
 
-  function handleShorten() {
-    if (!inputValue.trim()) return
-    setOriginalUrl(inputValue)
-    setInputValue(SHORTENED_URL)
+  async function handleShorten() {
+    if (!inputValue.trim()) return;
+    setIsLoading(true);
+
+    const response = await fetch('/api', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: inputValue }),
+    })
+
+    const { code } = await response.json()
+
+    setOriginalUrl(inputValue);
+    setInputValue(`${window.location.origin}/${code}`);
+    setIsLoading(false);
   }
 
   function handleCopy() {
     navigator.clipboard.writeText(inputValue)
+    setIsCopied(true)
+    setTimeout(() => setIsCopied(false), 5000)
   }
 
   function handleReset() {
@@ -27,6 +40,11 @@ export default function UrlShortener() {
 
   return (
     <div className="w-full max-w-2xl flex flex-col gap-4">
+      {isCopied && (
+        <div className="fixed bottom-5 right-5 bg-emerald-600 text-white text-sm font-medium px-4 py-2 rounded-xl shadow-lg">
+          Copied!
+        </div>
+      )}
       <div className="flex gap-3">
         <input
           type="url"
@@ -46,9 +64,10 @@ export default function UrlShortener() {
         ) : (
           <button
             onClick={handleShorten}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-3 rounded-xl transition-colors whitespace-nowrap"
+            disabled={isLoading}
+            className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold px-6 py-3 rounded-xl transition-colors whitespace-nowrap"
           >
-            Shorten
+            {isLoading ? 'Shortening...' : 'Shorten'}
           </button>
         )}
       </div>
